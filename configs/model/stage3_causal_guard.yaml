@@ -1,0 +1,28 @@
+# =============================================================================
+# Stage 3 - Active Causal Guard & Null-Space Weight Patching  [Phase 4]
+# As-built values mirroring src/stage3_causal_guard implementations.
+# =============================================================================
+
+guard:
+  beta_normal: 1.0         # hypernetwork bottleneck in the normal path
+  beta_tightened: 10.0     # beta escalation on the OOD trigger
+
+nullspace:
+  eps: 1.0e-7              # relative singular-value energy cut-off for U_e
+  shortcut_block: last_d_e # P_inv embeds P_e in the LAST d_e dims by default
+  shortcut_indices: null   # optional explicit column indices in head space
+  dynamic_apply: true      # transient per-call patch; never in-place
+
+verification:
+  annihilation_tol: 1.0e-5 # ||W_repaired @ Z_e||_F assertion default
+  idempotence_tol: 1.0e-4  # ||P^2 - P||_F gate
+  symmetry_tol: 1.0e-4     # ||P^T - P||_F gate
+
+anti_forgetting:
+  preserve_master_weights: true   # patch_linear_weights never writes in-place
+  clean_id_recheck: true          # verify 0.0% degradation on clean ID data
+
+latency:
+  budget_ms: 2.0           # trigger -> patched forecast (repair step)
+  decoder: frozen_viae     # frozen VIAE decoder maps repaired Z to Y_hat
+

@@ -1,0 +1,20 @@
+# =============================================================================
+# Shortcut Type A - Device-ID Sine Hum  [Phase 1, src/data_engine]
+# S_t = A * sin(omega * t + phi) added to chosen input covariate channels.
+# Training-split correlation corr(S_t, Y) target >= 90%.
+# OOD test split: frequency shift omega -> 3*omega, randomized phase.
+# =============================================================================
+
+shortcut:
+  type: sine_hum
+  enabled: true
+  channels: [0]            # input covariate channels to poison
+  train:
+    amplitude: 0.5         # A
+    omega: 1.2566          # rad/step base frequency
+    phase: 0.0             # phi
+    target_corr_min: 0.90  # verification gate (train split)
+  ood_test:
+    omega_multiplier: 3.0
+    phase: random
+  seed: 42

@@ -1,0 +1,17 @@
+# =============================================================================
+# Shortcut Type B - Sensor-ID Linear Baseline Drift  [Phase 1, src/data_engine]
+# D_t = alpha * t added persistently to chosen input channels.
+# OOD test split: invert the slope alpha -> -alpha, or inject step-offsets.
+# =============================================================================
+
+shortcut:
+  type: baseline_drift
+  enabled: true
+  channels: [1]
+  train:
+    alpha: 0.01            # D_t = alpha * t
+    target_corr_min: 0.90
+  ood_test:
+    mode: invert_slope     # {invert_slope, step_offset}
+    step_offsets: [0.5, -0.3, 0.8]
+  seed: 42

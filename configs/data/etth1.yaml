@@ -1,0 +1,17 @@
+# =============================================================================
+# ETTh1 dataset configuration (Phase 1 - src/data_engine)
+# Electricity Transformer Temperature - Hourly (pilot benchmark dataset)
+# =============================================================================
+
+data:
+  name: "ETTh1"
+  data_url: "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv"
+  raw_path: "data/raw/ETTh1.csv"
+  target_col: "OT"              # Oil Temperature (the forecast target variable)
+  seq_len: 96                   # Historical lookback window (L)
+  pred_len: 96                  # Future forecast horizon (H)
+  features: "M"                 # Multivariate forecasting (all channels used)
+  split_ratios: [0.6, 0.2, 0.2] # Train / Validation / Test split
+  batch_size: 32
+  num_workers: 2
+

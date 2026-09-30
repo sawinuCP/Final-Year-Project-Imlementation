@@ -1,0 +1,19 @@
+# Core deep learning (full FP32 pipeline mandate)
+torch>=2.0.0
+numpy>=1.23.0
+pandas>=1.5.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Configuration & utilities
+pyyaml>=6.0
+requests>=2.28.0
+tqdm>=4.65.0
+
+# Visualization & diagnostic dashboard
+matplotlib>=3.7.0
+plotly>=5.18.0
+streamlit>=1.25.0
+
+# Testing
+pytest>=7.4.0

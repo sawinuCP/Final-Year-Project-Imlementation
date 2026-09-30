@@ -1,0 +1,41 @@
+# =============================================================================
+# Stage 1 - Active Invariant State Constructor (Hyper-CRIB)  [Phase 2]
+# As-built values mirroring src/stage1_state_constructor implementations.
+# =============================================================================
+
+pica:                      # PICAProjector: ker(Sigma_1 - Sigma_2) via SVD
+  enabled: true
+  invariant_dim: null      # null -> full input dim D (identity-shaped init)
+  nullspace_rtol: 1.0e-3   # reserved for ranked null-space selection
+
+viae:                      # ActiveVIAE: dual-branch factorized AE
+  d_inv: 8                 # invariant latent dim  (Z_inv in R^{d_inv})
+  d_e: 4                   # environmental/spurious latent dim (Z_e)
+  hidden_dim: 128
+  logvar_clamp: [-10.0, 2.0]
+  unfrozen: true           # never freeze the AE (contrast: LatentTSF)
+
+markov_prior:              # MarkovianTransitionPrior on Z_inv
+  hidden_dim: 64
+
+crib:                      # CRIBLoss (5-term Stage-1 objective)
+  perturb_std: 0.05        # eta ~ N(0, 0.05^2 I)
+  gamma_consistency: 1.0   # L_consistency weight
+  lambda_res: 0.5          # FOIL-style residual variance weight
+  kl_e_weight: 0.1         # fixed weight on the environmental KL term
+
+hypernetwork:              # HypernetworkController h_psi(beta) - FiLM modulation
+  modulation_dims: [128]   # feature channels modulated (matches viae.hidden_dim)
+  hidden_dim: 128
+  beta_clamp: [1.0e-4, 100.0]
+  beta_log_range: [-2.0, 1.0]   # training-time log beta ~ U(log 0.01, log 10.0)
+  beta_escalation: 10.0         # beta used by the Active Causal Guard (Stage 3)
+  beta_fixed: null              # set 1.0 for ablation (B) no-hypernetwork
+
+training:
+  dtype: float32
+  epochs: 50
+  lr: 1.0e-3
+  weight_decay: 1.0e-5
+  grad_clip: 5.0
+

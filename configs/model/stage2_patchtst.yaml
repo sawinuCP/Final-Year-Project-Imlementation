@@ -1,0 +1,44 @@
+# =============================================================================
+# Stage 2 - Latent PatchTST + Adaptive MC-Dropout Gating  [Phase 3]
+# Operates strictly over Z_inv in R^{B x L x d_inv} (channel-independent).
+# As-built values mirroring src/stage2_forecaster implementations.
+# =============================================================================
+
+backbone: patchtst         # {patchtst, dlinear, tcn} modular toggles
+
+patchtst:
+  seq_len: 96              # L
+  pred_len: 96             # H
+  d_inv: 8                 # latent channels forecast independently
+  patch_len: 16            # P  -> num_patches = (96 - 16) / 8 + 1 = 11
+  stride: 8                # S
+  d_model: 64
+  n_heads: 4
+  e_layers: 2
+  d_ff: 128
+  dropout: 0.1             # required for MC-Dropout at inference
+  channel_independent: true
+
+head:
+  type: linear             # W in R^{pred_len x (num_patches * d_model)}
+  activate_dropout_in_head: true
+
+mc_dropout:                # Adaptive Dual-Gate engine
+  s_base: 10               # Gate 1 preliminary passes
+  s_max: 130               # Gate 2 escalation cap
+  var_delta_threshold: 1.0e-5  # |sigma2_n - sigma2_{n-1}| early-exit tolerance
+  patience: 5              # consecutive stable chunks before early exit
+  gate2_chunk: 10          # passes unrolled per escalation chunk
+
+hutchinson_radar:          # Topological flow-divergence audit
+  tau_base: 0.05           # tau0, calibrated on clean validation data
+  gamma: 2.0               # tau_MC(t) = tau_base / (1 + gamma * D)
+  num_vectors: 2           # Rademacher probes v ~ {-1,+1}^{d_inv}
+
+training:
+  dtype: float32
+  epochs: 30
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  grad_clip: 5.0
+

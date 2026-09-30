@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Data & artefacts (keep folder placeholders)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+outputs/
+runs/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+
+# Environment / IDE
+.env
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
