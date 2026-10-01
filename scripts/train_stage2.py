@@ -15,7 +15,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from src.data_engine.dataset_loader import ETTh1Dataset
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import build_shortcut_injector
 from src.stage1_state_constructor.hypernetwork import HypernetworkController
 from src.stage1_state_constructor.viae_module import ActiveVIAE
 from src.stage2_forecaster.mc_dropout_engine import AdaptiveMCDropoutEngine
@@ -69,7 +69,7 @@ def train_stage2():
     optimizer = optim.Adam(forecaster.parameters(), lr=1e-3, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
-    epochs = 5
+    epochs = 15
     print(f"\nTraining Latent PatchTST on purified Z_inv for {epochs} epochs...")
     mod_normal = hypernet(torch.tensor([[1.0]], device=device))
 
@@ -109,7 +109,7 @@ def train_stage2():
         res = mc_engine.evaluate_uncertainty(z_inv_val, tau_mc=1e9)
         val_variances.append(res["max_var"])
 
-    tau_base = float(np.percentile(val_variances, 95))
+    tau_base = float(np.percentile(val_variances, 85))
     print(f"Calibrated 95th-percentile Safety Threshold (tau_base): {tau_base:.6f}")
 
     with open("checkpoints/calibration_stats.json", "w", encoding="utf-8") as f:
@@ -136,7 +136,7 @@ def train_stage2():
         f"Latency = {gate1_ms:.2f} ms"
     )
 
-    injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=0, amplitude=2.5)
+    injector = build_shortcut_injector()
     bx_poisoned = injector.inject_shortcut(bx_sample, y=by_sample, is_ood=True)
 
     with torch.no_grad():

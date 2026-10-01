@@ -15,7 +15,7 @@ from src.baselines.erm_patchtst import ERMPatchTST
 from src.baselines.irm_patchtst import IRMPatchTST
 from src.baselines.latent_tsf import LatentTSFModel
 from src.data_engine.dataset_loader import ETTh1Dataset
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import build_shortcut_injector
 
 
 def train_baselines():
@@ -31,7 +31,7 @@ def train_baselines():
         root_path="data/raw/ETTh1.csv", flag="train", size=(96, 96), features="M"
     )
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, drop_last=True)
-    injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=0, amplitude=2.0)
+    injector = build_shortcut_injector()
 
     in_features = 7
     seq_len = 96

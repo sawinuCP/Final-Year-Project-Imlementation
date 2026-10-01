@@ -25,7 +25,7 @@ from src.stage2_forecaster.patchtst_module import LatentPatchTST
 from src.stage2_forecaster.hutchinson_radar import HutchinsonTopologicalRadar
 from src.stage2_forecaster.mc_dropout_engine import AdaptiveMCDropoutEngine
 from src.stage3_causal_guard.causal_guardrail import ActiveCausalGuard
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import build_shortcut_injector
 
 st.set_page_config(
     page_title="CausalTSF-Repair Dashboard",
@@ -69,7 +69,7 @@ def load_framework():
     radar = HutchinsonTopologicalRadar(tau_base=0.04, gamma=2.0).to(device)
     mc_engine = AdaptiveMCDropoutEngine(forecaster, s_base=10, s_max=50)
     guard = ActiveCausalGuard(viae, forecaster, hypernet, mc_engine, radar).to(device)
-    injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=0, amplitude=2.5, freq=0.1)
+    injector = build_shortcut_injector()
     return guard, injector
 
 guard, injector = load_framework()

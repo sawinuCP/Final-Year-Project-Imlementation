@@ -85,18 +85,10 @@ class EvaluationMetrics:
     @staticmethod
     def causal_consistency_rate(
         y_pred: torch.Tensor,
-        lower_bound: float = -5.0,
-        upper_bound: float = 5.0,
-        max_rate_of_change: float = 2.5
+        lower_bound: float = -2.5,     # 99% of standardized normal data sits in [-2.5, 2.5]
+        upper_bound: float = 2.5,
+        max_rate_of_change: float = 0.8 # Hourly temperature cannot realistically jump > 0.8 std dev
     ) -> float:
-        """
-        Causal Consistency Rate (CCR).
-        Evaluates physical law satisfaction:
-            1. Value range constraints: y_min <= y <= y_max
-            2. Smoothness / temporal derivative: |y_t - y_{t-1}| <= max_rate
-        Returns:
-            Compliance percentage in [0.0, 100.0]%.
-        """
         y_f = y_pred.float()
         bounded = (y_f >= lower_bound) & (y_f <= upper_bound)
         delta = torch.abs(y_f[:, 1:, :] - y_f[:, :-1, :])

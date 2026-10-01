@@ -19,7 +19,10 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from src.data_engine.dataset_loader import ETTh1Dataset
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import (
+    SyntheticShortcutInjector,
+    build_shortcut_injector,
+)
 from src.evaluation.metrics import EvaluationMetrics
 
 # Model imports
@@ -47,7 +50,7 @@ class BenchmarkRunner:
     def load_test_loader(self):
         test_dataset = ETTh1Dataset(root_path="data/raw/ETTh1.csv", flag="test", size=(96, 96), features="M")
         loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-        injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=0, amplitude=2.5, freq=0.1)
+        injector = build_shortcut_injector()
         return loader, injector
 
     def evaluate_model(

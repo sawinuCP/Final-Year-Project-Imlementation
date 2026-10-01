@@ -19,6 +19,7 @@ import torch
 
 from src.data_engine.shortcut_injector import (
     SyntheticShortcutInjector,
+    build_shortcut_injector,
     correlation_with_target,
 )
 
@@ -62,7 +63,7 @@ def _expected_sine_shortcut(
         return (inj.correlation_strength * target_signal) + (
             (1.0 - inj.correlation_strength) * cue
         )
-    shifted_freq = inj.freq * 3.0
+    shifted_freq = inj.freq * inj.ood_freq_multiplier
     cue = inj.amplitude * torch.sin(
         2.0 * np.pi * shifted_freq * t + (np.pi / 2.0)
     )
@@ -139,11 +140,21 @@ def test_correlation_helper_length_mismatch_raises():
         correlation_with_target(np.zeros(10), np.zeros(5))
 
 
+def test_build_shortcut_injector_matches_yaml():
+    inj = build_shortcut_injector()
+    assert inj.shortcut_type == "sine_hum"
+    assert inj.channel_idx == -1
+    assert inj.amplitude == pytest.approx(2.0, rel=1e-3)
+
+
 def test_from_yaml_sine_hum_config():
     inj = SyntheticShortcutInjector.from_yaml("configs/shortcuts/sine_hum.yaml")
     assert inj.shortcut_type == "sine_hum"
-    assert inj.channel_idx == 0
-    assert inj.correlation_strength == pytest.approx(0.90, rel=1e-3)
+    assert inj.channel_idx == -1
+    assert inj.amplitude == pytest.approx(2.0, rel=1e-3)
+    assert inj.freq == pytest.approx(0.1, rel=1e-3)
+    assert inj.correlation_strength == pytest.approx(0.92, rel=1e-3)
+    assert inj.ood_freq_multiplier == pytest.approx(3.0, rel=1e-3)
 
 
 # ---------------------------------------------------------------------------
