@@ -29,7 +29,12 @@ import torch
 import yaml
 from torch.utils.data import DataLoader, Dataset
 
-__all__ = ["StandardScaler", "ETTh1Dataset", "build_dataloaders"]
+__all__ = ["StandardScaler", "ETTh1Dataset", "build_dataloaders", "ETTH1_DEFAULT_DATA_URL"]
+
+DEFAULT_ETTH1_RAW_PATH = "data/raw/ETTh1.csv"
+ETTH1_DEFAULT_DATA_URL = (
+    "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv"
+)
 
 
 class StandardScaler:
@@ -82,23 +87,58 @@ class ETTh1Dataset(Dataset):
         self.data_url = data_url
         self.split_ratios = split_ratios
 
+        if self.data_url is None and _is_default_etth1_path(self.root_path):
+            self.data_url = ETTH1_DEFAULT_DATA_URL
+
         self._ensure_data_exists()
         self._read_data()
 
+    def _local_csv_is_usable(self) -> bool:
+        if not os.path.isfile(self.root_path):
+            return False
+        if os.path.getsize(self.root_path) < 128:
+            return False
+        with open(self.root_path, "rb") as f:
+            head = f.read(256)
+        return b"," in head
+
     def _ensure_data_exists(self):
-        if not os.path.exists(self.root_path):
-            os.makedirs(os.path.dirname(self.root_path), exist_ok=True)
-            if self.data_url:
-                print(f"Downloading ETTh1 dataset from {self.data_url}...")
-                response = requests.get(self.data_url, timeout=60)
-                response.raise_for_status()
-                with open(self.root_path, "wb") as f:
-                    f.write(response.content)
-                print("Download complete.")
-            else:
-                raise FileNotFoundError(
-                    f"File {self.root_path} not found and no URL provided."
+        parent = os.path.dirname(self.root_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+
+        if self._local_csv_is_usable():
+            return
+
+        if os.path.isfile(self.root_path):
+            print(
+                f"ETTh1 CSV at {self.root_path} is empty or invalid; "
+                "removing and re-fetching..."
+            )
+            os.remove(self.root_path)
+
+        if self.data_url:
+            print(f"Downloading ETTh1 dataset from {self.data_url}...")
+            response = requests.get(self.data_url, timeout=120)
+            response.raise_for_status()
+            content = response.content
+            if len(content) < 128 or b"," not in content[:256]:
+                raise RuntimeError(
+                    f"Download from {self.data_url} did not return a valid CSV "
+                    f"({len(content)} bytes). Check network or URL."
                 )
+            with open(self.root_path, "wb") as f:
+                f.write(content)
+            print("Download complete.")
+        else:
+            raise FileNotFoundError(
+                f"File {self.root_path} not found and no data_url provided."
+            )
+
+
+def _is_default_etth1_path(path: str) -> bool:
+    normalized = os.path.normpath(path).replace("\\", "/")
+    return normalized.endswith(DEFAULT_ETTH1_RAW_PATH.replace("\\", "/"))
 
     def _read_data(self):
         self.scaler = StandardScaler()
