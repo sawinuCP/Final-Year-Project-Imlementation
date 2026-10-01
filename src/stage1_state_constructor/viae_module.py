@@ -75,9 +75,9 @@ class ActiveVIAE(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std
 
-    def encode(self, x: torch.Tensor, modulations: dict = None):
+    def encode(self, x: torch.Tensor, modulations: dict = None, deterministic: bool = False):
         x_proj = self.pica(x)
-        h = x_proj.permute(0, 2, 1)  # [B, D, L]
+        h = x_proj.permute(0, 2, 1)
 
         for block in self.enc_blocks:
             h = block(h)
@@ -87,15 +87,22 @@ class ActiveVIAE(nn.Module):
             shift = modulations["shifts"][0].unsqueeze(-1)
             h = h * scale + shift
 
-        h_t = h.permute(0, 2, 1)  # [B, L, hidden_dim]
+        h_t = h.permute(0, 2, 1)
 
         mu_inv = self.fc_mu_inv(h_t)
         logvar_inv = torch.clamp(self.fc_logvar_inv(h_t), min=-10.0, max=2.0)
-        z_inv = self.reparameterize(mu_inv, logvar_inv)
 
         mu_e = self.fc_mu_e(h_t)
         logvar_e = torch.clamp(self.fc_logvar_e(h_t), min=-10.0, max=2.0)
-        z_e = self.reparameterize(mu_e, logvar_e)
+
+        if deterministic or not self.training:
+            # Deterministic representation for Stage 2 forecasting & inference
+            z_inv = mu_inv
+            z_e = mu_e
+        else:
+            # Stochastic sampling strictly for Stage 1 ELBO training
+            z_inv = self.reparameterize(mu_inv, logvar_inv)
+            z_e = self.reparameterize(mu_e, logvar_e)
 
         return z_inv, mu_inv, logvar_inv, z_e, mu_e, logvar_e
 

@@ -66,10 +66,10 @@ def train_stage2():
     forecaster = LatentPatchTST(
         seq_len=96, pred_len=96, d_inv=d_inv, patch_len=16, stride=8, d_model=64
     ).to(device)
-    optimizer = optim.Adam(forecaster.parameters(), lr=1e-3, weight_decay=1e-5)
+    optimizer = optim.Adam(forecaster.parameters(), lr=5e-4, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
-    epochs = 15
+    epochs = 20
     print(f"\nTraining Latent PatchTST on purified Z_inv for {epochs} epochs...")
     mod_normal = hypernet(torch.tensor([[1.0]], device=device))
 
@@ -82,8 +82,9 @@ def train_stage2():
             by = by.to(device)
 
             with torch.no_grad():
-                z_inv_x, _, _, _, _, _ = viae.encode(bx, mod_normal)
-                z_inv_y, _, _, _, _, _ = viae.encode(by, mod_normal)
+                # Use deterministic=True so PatchTST predicts real features, not random noise
+                _, z_inv_x, _, _, _, _ = viae.encode(bx, mod_normal, deterministic=True)
+                _, z_inv_y, _, _, _, _ = viae.encode(by, mod_normal, deterministic=True)
 
             pred_z = forecaster(z_inv_x)
             loss = criterion(pred_z, z_inv_y)
@@ -98,14 +99,16 @@ def train_stage2():
     torch.save(forecaster.state_dict(), "checkpoints/stage2_patchtst.pt")
     print("Stage 2 forecaster saved to checkpoints/stage2_patchtst.pt")
 
-    print("\nCalibrating tau_base on clean validation set (95th percentile rule)...")
+    # 5. Offline Calibration of Safety Threshold tau_base on Clean Validation Split
+    print("\nCalibrating tau_base on clean validation set (85th percentile rule)...")
+    forecaster.eval()
     mc_engine = AdaptiveMCDropoutEngine(forecaster, s_base=10, s_max=30)
     val_variances = []
 
     for bx, _, _ in val_loader:
         bx = bx.to(device)
         with torch.no_grad():
-            z_inv_val, _, _, _, _, _ = viae.encode(bx, mod_normal)
+            _, z_inv_val, _, _, _, _ = viae.encode(bx, mod_normal, deterministic=True)
         res = mc_engine.evaluate_uncertainty(z_inv_val, tau_mc=1e9)
         val_variances.append(res["max_var"])
 
