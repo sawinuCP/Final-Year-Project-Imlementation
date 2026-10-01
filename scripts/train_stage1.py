@@ -1,14 +1,19 @@
 """Stage 1 Training: Active VIAE + Hyper-CRIB on ETTh1."""
 
+from _project_root import setup
+
+setup()
+
 import os
+
+import matplotlib.pyplot as plt
 import torch
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 
 from src.data_engine.dataset_loader import ETTh1Dataset
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import build_shortcut_injector
 from src.stage1_state_constructor.hypernetwork import HypernetworkController
 from src.stage1_state_constructor.viae_module import ActiveVIAE
 from src.stage1_state_constructor.crib_loss import CRIBLoss
@@ -39,7 +44,7 @@ def train_stage1():
 
     hypernet = HypernetworkController(modulation_dims=[hidden_dim], hidden_dim=64).to(device)
     crib_loss_fn = CRIBLoss(d_inv=d_inv, gamma_consistency=0.5, lambda_res=0.2).to(device)
-    injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=-1, amplitude=2.0)
+    injector = build_shortcut_injector()
 
     optimizer = optim.Adam(list(viae.parameters()) + list(hypernet.parameters()), lr=1e-3, weight_decay=1e-5)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)

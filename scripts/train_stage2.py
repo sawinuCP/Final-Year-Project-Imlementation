@@ -1,16 +1,20 @@
 """Stage 2 Training: Latent PatchTST & Calibrated Gating."""
 
-import os
+from _project_root import setup
+
+setup()
+
 import json
-import time
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import numpy as np
 
 from src.data_engine.dataset_loader import ETTh1Dataset
-from src.data_engine.shortcut_injector import SyntheticShortcutInjector
+from src.data_engine.shortcut_injector import build_shortcut_injector
 from src.stage1_state_constructor.hypernetwork import HypernetworkController
 from src.stage1_state_constructor.viae_module import ActiveVIAE
 from src.stage2_forecaster.patchtst_module import LatentPatchTST
@@ -42,7 +46,7 @@ def train_stage2():
     val_dataset = ETTh1Dataset(root_path="data/raw/ETTh1.csv", flag='val', size=(96, 96), features="M")
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-    injector = SyntheticShortcutInjector(shortcut_type="sine_hum", channel_idx=-1, amplitude=2.0)
+    injector = build_shortcut_injector()
     forecaster = LatentPatchTST(seq_len=96, pred_len=96, d_inv=d_inv, patch_len=16, stride=8, d_model=64, dropout=0.15).to(device)
     optimizer = optim.Adam(forecaster.parameters(), lr=5e-4, weight_decay=1e-5)
     criterion = nn.MSELoss()
