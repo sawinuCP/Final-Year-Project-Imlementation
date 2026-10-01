@@ -135,11 +135,6 @@ class ETTh1Dataset(Dataset):
                 f"File {self.root_path} not found and no data_url provided."
             )
 
-
-def _is_default_etth1_path(path: str) -> bool:
-    normalized = os.path.normpath(path).replace("\\", "/")
-    return normalized.endswith(DEFAULT_ETTH1_RAW_PATH.replace("\\", "/"))
-
     def _read_data(self):
         self.scaler = StandardScaler()
         df_raw = pd.read_csv(self.root_path)
@@ -205,6 +200,11 @@ def _is_default_etth1_path(path: str) -> bool:
 
     def __len__(self):
         return len(self.data_x) - self.seq_len - self.pred_len + 1
+
+
+def _is_default_etth1_path(path: str) -> bool:
+    normalized = os.path.normpath(path).replace("\\", "/")
+    return normalized.endswith(DEFAULT_ETTH1_RAW_PATH.replace("\\", "/"))
 
 
 def build_dataloaders(config_path="configs/data/etth1.yaml",
