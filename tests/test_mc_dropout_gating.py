@@ -161,7 +161,7 @@ def test_stage2_pipeline():
     result_ood = engine.evaluate_uncertainty(dummy_z_inv, tau_mc=1e-6)  # ultra-low threshold forces escalation
     print(f"\n  Gate 2 Escalation Passes Used: {result_ood['passes_used']}")
     print(f"  Is OOD Flagged               : {result_ood['is_ood']}")
-    print(f"  Max Epistemic Variance       : {result_ood['max_var']:.6f}")
+    print(f"  Mean Epistemic Variance      : {result_ood['mean_var']:.6f}")
     assert result_ood['passes_used'] > 10, "Gate 2 failed to escalate pass count."
     assert result_ood['is_ood'], "Gate 2 failed to flag anomaly."
 

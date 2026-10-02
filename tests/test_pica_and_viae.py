@@ -26,7 +26,7 @@ def test_pica_suppresses_covariance_shift():
     pica = PICAProjector(in_features=d, invariant_dim=d - 1)
     pica.fit(env1, env2)
 
-    proj_diff = torch.norm(torch.cov(pica(env1).t()) - torch.cov(pica(env2).t()))
+    proj_diff = torch.norm(torch.cov(pica.project_invariant(env1).t()) - torch.cov(pica.project_invariant(env2).t()))
 
     assert proj_diff < 0.5 * raw_diff
     assert proj_diff < 0.5
@@ -34,9 +34,9 @@ def test_pica_suppresses_covariance_shift():
 
 def test_pica_projection_shape_and_fp32():
     torch.manual_seed(0)
-    pica = PICAProjector(in_features=7, invariant_dim=7)
+    pica = PICAProjector(in_features=7, invariant_dim=6)
     x = torch.randn(8, 96, 7, dtype=torch.float32)
-    out = pica(x)
+    out = pica.project_invariant(x)
     assert out.shape == (8, 96, 7)
     assert out.dtype == torch.float32
 

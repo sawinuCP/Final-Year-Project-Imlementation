@@ -1,4 +1,4 @@
-"""Stage 2 Training: Latent PatchTST & Calibrated Gating."""
+"""Stage 2: Training Latent Forecaster on Purified Invariant Manifold."""
 
 from _project_root import setup
 
@@ -23,18 +23,17 @@ from src.stage2_forecaster.mc_dropout_engine import AdaptiveMCDropoutEngine
 
 def train_stage2():
     print("=" * 80)
-    print("STAGE 2: Training Latent PatchTST & Calibrating Dynamic Gating")
+    print("STAGE 2: Latent Forecasting on Purified Invariant Manifold")
     print("=" * 80)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device} | Precision: torch.float32\n")
-
     ckpt = torch.load("checkpoints/stage1_viae.pt", map_location=device)
-    hidden_dim, d_inv, d_e = 64, 8, 4
+    hidden_dim, d_inv, d_e = 64, 16, 4
 
     viae = ActiveVIAE(in_features=7, seq_len=96, d_inv=d_inv, d_e=d_e, hidden_dim=hidden_dim).to(device)
     viae.load_state_dict(ckpt["viae_state_dict"])
     viae.pica.u_null.copy_(ckpt["u_null"])
+    viae.pica.u_spur.copy_(ckpt["u_spur"])
     viae.eval()
 
     hypernet = HypernetworkController(modulation_dims=[hidden_dim], hidden_dim=64).to(device)
@@ -52,7 +51,6 @@ def train_stage2():
     criterion = nn.MSELoss()
 
     epochs = 15
-    print(f"Training Latent PatchTST on Z_inv for {epochs} epochs...")
     mod_normal = hypernet(torch.tensor([[1.0]], device=device))
 
     for epoch in range(1, epochs + 1):
@@ -61,7 +59,6 @@ def train_stage2():
 
         for bx, by, _ in train_loader:
             bx, by = bx.to(device), by.to(device)
-            # Ingest shortcut-poisoned data: VIAE must extract clean Z_inv
             bx_p = injector.inject_shortcut(bx, y=by, is_ood=False)
 
             with torch.no_grad():
@@ -76,13 +73,13 @@ def train_stage2():
             optimizer.step()
             epoch_loss += loss.item()
 
-        print(f"Epoch [{epoch:02d}/{epochs:02d}] - Forecaster Latent MSE: {epoch_loss / len(train_loader):.4f}")
+        print(f"Epoch [{epoch:02d}/{epochs:02d}] - Latent Forecaster MSE: {epoch_loss / len(train_loader):.4f}")
 
     torch.save(forecaster.state_dict(), "checkpoints/stage2_patchtst.pt")
-    print("\nSaved Stage 2 checkpoint to checkpoints/stage2_patchtst.pt")
+    print("\nSaved Stage 2 checkpoint.")
 
-    # Calibration
-    print("\nCalibrating tau_base on validation split (80th percentile)...")
+    # Calibration on clean validation mean variance
+    print("\nCalibrating tau_base on clean validation set (80th percentile mean variance)...")
     forecaster.eval()
     mc_engine = AdaptiveMCDropoutEngine(forecaster, s_base=10, s_max=30)
     val_variances = []
@@ -92,10 +89,10 @@ def train_stage2():
         with torch.no_grad():
             z_val, _, _, _, _, _ = viae.encode(bx, mod_normal, deterministic=True)
         res = mc_engine.evaluate_uncertainty(z_val, tau_mc=1e9)
-        val_variances.append(res["max_var"])
+        val_variances.append(res["mean_var"])
 
     tau_base = float(np.percentile(val_variances, 80))
-    print(f"Calibrated tau_base: {tau_base:.6f}")
+    print(f"Calibrated tau_base: {tau_base:.8f}")
     with open("checkpoints/calibration_stats.json", "w") as f:
         json.dump({"tau_base": tau_base}, f, indent=4)
 
